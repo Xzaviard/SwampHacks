@@ -462,7 +462,7 @@ for i in range (10):
         # Run agent on the state
         action = mario.act(state)
         env.render()
-        time.sleep(0.02)
+        time.sleep(0.03)
 
         # Agent performs action
         next_state, reward, done, info = env.step(action)
