@@ -14,16 +14,46 @@ from collections import deque #
 from nes_py.wrappers import JoypadSpace #
 from gym.spaces import Box #
 from gym.wrappers import FrameStack #
-from gym_super_mario_bros.actions import RIGHT_ONLY
+from gym_super_mario_bros.actions import SIMPLE_MOVEMENT, RIGHT_ONLY, COMPLEX_MOVEMENT
 
 
 
 # Creating environment
 
+RYAN_MOVEMENT = [
+    ['NOOP'],
+    ['down'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+    ['left', 'A'],
+    ['up'],
+    ['down'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+    ['A'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+    ['left'],
+    ['left'],
+    ['left'],
+    ['left'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+    ['A'],
+    ['down'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+    ['right', 'A', 'B'],
+]
 
 env = gym_env.make("SuperMarioBros-v0")
-env = JoypadSpace(env, RIGHT_ONLY) # Makes sure all options are available
+env = JoypadSpace(env, RYAN_MOVEMENT) # Makes sure all options are available
 env.reset()
+
 
 next_state, reward, done, info = env.step(action = 0)
 print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
@@ -111,7 +141,7 @@ class Mario:
             self.net = self.net.to(device="cuda")
 
         self.exploration_rate = 1
-        self.exploration_rate_decay = 0.99999975
+        self.exploration_rate_decay = .99999975
         self.exploration_rate_min = 0.1
         self.curr_step = 0
 
@@ -415,7 +445,7 @@ class MetricLogger:
         for metric in ["ep_rewards", "ep_lengths", "ep_avg_losses", "ep_avg_qs"]:
             plt.plot(getattr(self, f"moving_avg_{metric}"))
             plt.savefig(getattr(self, f"{metric}_plot"))
-            plt.c()
+            plt.clf()
 
 
 use_cuda = torch.cuda.is_available()
@@ -424,30 +454,31 @@ use_cuda = torch.cuda.is_available()
 pre_loaded_model_path = "mario_4.pt"
 mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir="/kaggle/working/")
 mario.net.load_state_dict(torch.load(pre_loaded_model_path), strict=False)
-state = env.reset()
-# Play the game!
-while True:
+for i in range (10):
+    state = env.reset()
+    # Play the game!
+    while True:
 
-    # Run agent on the state
-    action = mario.act(state)
-    env.render()
-    time.sleep(0.04)
+        # Run agent on the state
+        action = mario.act(state)
+        env.render()
+        time.sleep(0.02)
 
-    # Agent performs action
-    next_state, reward, done, info = env.step(action)
+        # Agent performs action
+        next_state, reward, done, info = env.step(action)
 
-    # Remember
-    mario.cache(state, next_state, action, reward, done)
+        # Remember
+        mario.cache(state, next_state, action, reward, done)
 
-    # Learn
-    q, loss = mario.learn()
+        # Learn
+        q, loss = mario.learn()
 
-    # Update state
-    state = next_state
+        # Update state
+        state = next_state
 
-    # Check if end of game
-    if done or info["flag_get"]:
-        break
+        # Check if end of game
+        if done or info["flag_get"]:
+            break
 env.close()
 
 print(info)
